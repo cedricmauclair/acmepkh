@@ -1,0 +1,109 @@
+\documentclass{article}
+
+\usepackage[T1]   {fontenc}
+\usepackage[utf8] {inputenc}
+
+\usepackage{acmepkh, verbatim}
+
+\let\type\texttt
+\def\typehandler#1{\type{.#1}}
+\def\macro#1{\type{\char`\\#1}}
+
+\pgfkeys{/test/.is family}
+\def\testhandlers{\pgfqkeys{/test}}
+
+\newcommand\getparameters[2][]{%
+ \pgfqkeys{/parameters}{prefix=#1, #2}}
+
+\newcommand\geteparameters[2][]{%
+ \pgfqkeys{/eparameters}{prefix=#1, #2}}
+
+
+\begin{document}
+
+\section{\typehandler{dimension} and \typehandler{number}}
+
+\testhandlers{%
+  dimension/.store in=\testdimension,
+  number/.store in=\testnumber,
+  % test values
+  dimension/.dimension=12pt+3pt,
+  number/.number=12+3.2}
+
+\begin{itemize}
+\item \typehandler{dimension} : 15.0pt/\testdimension
+\item \typehandler{number} : 15.2/\testnumber
+\end{itemize}
+
+
+\section{\typehandler{store dimension in} and \typehandler{store number in}}
+
+\testhandlers{%
+  storedimensionin/.store dimension in=\teststoredimensionin,
+  storenumberin/.store number in=\teststorenumberin,
+  % test values
+  storedimensionin=12pt+3pt,
+  storenumberin=12+3.2}
+
+\begin{itemize}
+\item \typehandler{store dimension in} : 15.0pt/\teststoredimensionin
+\item \typehandler{store number in} : 15.2/\teststorenumberin
+\end{itemize}
+
+
+\section{\typehandler{append to} and \typehandler{prepend to}}
+
+\testhandlers{%
+  append to/.append to=\testappendto,
+  prepend to/.prepend to=\testprependto,
+  % test values
+  append to=one,
+  append to={, two},
+  prepend to=one,
+  prepend to={two, },
+  prepend to=\testappendto
+}
+
+\begin{itemize}
+\item \typehandler{append to} : one, two/\testappendto
+\item \typehandler{prepend to} : two, onetwo,one/\testprependto
+\end{itemize}
+
+
+\section{\type{/(e)parameters/prefix} and \type{/(e)parameters/...}}
+
+\pgfqkeys{/parameters}{%
+  prefix=,     toto=titi, % \toto     now exist with value 'titi'
+  prefix=test, toto=\toto}% \testtoto now exist with value \toto
+
+\begin{itemize}
+\item \type{/parameters/prefix} : test/\csname @@prefix\endcsname
+\item \type{/parameters/...} : titi -- tata/%
+                             \toto\ -- \def\toto{tata}\testtoto
+\end{itemize}
+
+
+\pgfqkeys{/eparameters}{%
+  prefix=,     toto=titi, % \toto     now exist with value 'titi'
+  prefix=test, toto=\toto}% \testtoto now exist with value 'titi'
+
+\begin{itemize}
+\item \type{/eparameters/prefix} : test/\csname @@prefix\endcsname
+\item \type{/eparameters/...} : titi -- titi/%
+                              \toto\ -- \def\toto{tata}\testtoto
+\end{itemize}
+
+
+\section{\macro{getparameters} and \macro{geteparameters}}
+
+\noindent
+\getparameters[test]
+  {toto=titi, tata=\testtoto, toto=tete}
+tete -- tete/\testtoto\ -- \testtata
+
+\noindent
+\geteparameters
+  {toto=tutu, tata=\toto, toto=tete}
+tete -- tutu/\toto\ -- \tata
+
+\end{document}

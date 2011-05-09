@@ -1,0 +1,131 @@
+% Time-stamp: <2011-05-09 18:23:45 cmauclai>
+%
+% Copyright 2011 by Cedric Mauclair
+%
+% This file may be distributed and/or modified according to the
+% following licences:
+%
+% 1. CCPL Attribution-ShareAlike License
+%    (http://creativecommons.org/licenses/by-sa/3.0/legalcode)
+% 2. GNU Public License 3
+%    (http://www.gnu.org/licenses/gpl.html)
+%
+%         ————————————————————————————————————————————————————
+%
+% Latest major version: 0.1
+% Date: 2011-05-09
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Handlers for use with pgfkeys package (c) Cedric Mauclair, 2011.
+%
+%   [2011-05-09] Version: 0.1 -- First functionnal release.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\NeedsTeXFormat  {LaTeX2e}
+\ProvidesPackage {acmepkh} [2011/05/09 v0.1 Handy pgfkeys handlers]
+
+
+%% obvious requirement
+\RequirePackage{pgfkeys}
+
+%% shortcuts
+\let\@EA\expandafter
+\let\@NX\noexpand
+
+%% use mnemonic names
+\let\scratchdimen\@tempdima
+\let\scratchcount\@tempcnta
+\let\scratchtoken\@temptokena
+\let\gobbleonearg\@gobble
+
+
+%D .dimension, .number
+%D
+%D Evaluate and return #1 as dimension or number for precedin key.
+%D (see also '.list' from [pgfkeys] package)
+
+\pgfkeysdef{/handlers/.dimension}{%
+  \@EA\pgfkeys@exp@call\@EA{\the\dimexpr#1\relax}}
+
+\pgfkeysdef{/handlers/.number}{%
+  \@EA\pgfkeys@exp@call\@EA{\the\numexpr#1\relax}}
+
+%D .store dimension in, .store number in,
+%D
+%D Declare key to store evaluated ##1 in #1.
+%D
+%D Example:
+%D   \pgfkeys{/test/.store in=\test}
+%D   \pgfkeys{/test/.dimexpr=12pt+3pt}
+%D   \pgfkeys{/test/.dimexpr=1sp+3cm}
+%D equivalent to
+%D   \pgfkeys{/test/.store dimension in=\test}
+%D   \pgfkeys{/test/12pt+3pt}
+%D   \pgfkeys{/test/1sp+3cm}
+
+\pgfkeysdef{/handlers/.store dimension in}{%
+  \pgfkeysdef{\pgfkeyscurrentpath}
+             {\@EA\def\@EA#1\@EA{\the\dimexpr##1\relax}}}
+
+\pgfkeysdef{/handlers/.store number in}{%
+  \pgfkeysdef{\pgfkeyscurrentpath}
+             {\@EA\def\@EA#1\@EA{\the\numexpr##1\relax}}}
+
+%D .append to, .prepend to
+%D
+%D Declare key to append or prepend code to #1 (created if needed).
+
+\pgfkeysdef{/handlers/.append to}{%
+  \pgfkeysdef{\pgfkeyscurrentpath}{%
+    \@EA\ifx\csname\@EA\gobbleonearg\string#1\endcsname\relax
+      \@EA\def\csname\@EA\gobbleonearg\string#1\endcsname{}\fi
+    \@EA\scratchtoken\@EA{#1}%
+    \@EA\edef\csname\@EA\gobbleonearg\string#1\endcsname
+      {\the\scratchtoken##1}}}
+
+\pgfkeysdef{/handlers/.prepend to}{%
+  \pgfkeysdef{\pgfkeyscurrentpath}{%
+    \@EA\ifx\csname\@EA\gobbleonearg\string#1\endcsname\relax
+      \@EA\def\csname\@EA\gobbleonearg\string#1\endcsname{}\fi
+    \@EA\scratchtoken\@EA{#1}%
+    \@EA\edef\csname\@EA\gobbleonearg\string#1\endcsname
+      {##1\the\scratchtoken}}}
+
+%D /parameters/prefix, /parameters/...
+%D
+%D Declare the prefix used in subsequent /parameters/... calls.
+
+\pgfkeys{/parameters/.is family}
+\pgfkeysdef{/parameters/prefix}{\edef\@@prefix{#1}}
+\pgfkeysdef{/parameters/.unknown}{%
+  \@EA\def\csname \@@prefix\pgfkeyscurrentname\endcsname{#1}}
+
+%D /eparameters/prefix, /eparameters/...
+%D
+%D Declare the prefix used in subsequent /parameters/... calls.
+
+\pgfkeys{/eparameters/.is family}
+\pgfkeysdef{/eparameters/prefix}{\edef\@@prefix{#1}}
+\pgfkeysdef{/eparameters/.unknown}{%
+  \@EA\edef\csname \@@prefix\pgfkeyscurrentname\endcsname{#1}}
+
+
+%D .store in cs, .estore in cs
+%D
+%D Same as .store in and .estore in, use \csname...\endcsname instead.
+
+\pgfkeysdef{/handlers/.store in cs}{%
+  \pgfkeysdef{\pgfkeyscurrentpath}{\@EA\def\csname#1\endcsname{##1}}}
+
+\pgfkeysdef{/handlers/.estore in cs}{%
+  \pgfkeysdef{\pgfkeyscurrentpath}{\@EA\edef\csname#1\endcsname{##1}}}
+
+
+\endinput
+
+
+%%% Local Variables:
+%%% TeX-master: "./demo.tex"
+%%% End:
