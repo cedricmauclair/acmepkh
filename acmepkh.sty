@@ -1,4 +1,4 @@
-% Time-stamp: <2011-05-09 18:23:45 cmauclai>
+% Time-stamp: <2011-05-10 15:48:37 cmauclai>
 %
 % Copyright 2011 by Cedric Mauclair
 %
@@ -28,7 +28,7 @@
 
 
 %% obvious requirement
-\RequirePackage{pgfkeys}
+\RequirePackage{pgfkeys,pgffor}
 
 %% shortcuts
 \let\@EA\expandafter
@@ -52,7 +52,7 @@
 \pgfkeysdef{/handlers/.number}{%
   \@EA\pgfkeys@exp@call\@EA{\the\numexpr#1\relax}}
 
-%D .store dimension in, .store number in,
+%D .dimension in, .number in,
 %D
 %D Declare key to store evaluated ##1 in #1.
 %D
@@ -61,66 +61,137 @@
 %D   \pgfkeys{/test/.dimexpr=12pt+3pt}
 %D   \pgfkeys{/test/.dimexpr=1sp+3cm}
 %D equivalent to
-%D   \pgfkeys{/test/.store dimension in=\test}
+%D   \pgfkeys{/test/.dimension in=\test}
 %D   \pgfkeys{/test/12pt+3pt}
 %D   \pgfkeys{/test/1sp+3cm}
 
-\pgfkeysdef{/handlers/.store dimension in}{%
-  \pgfkeysdef{\pgfkeyscurrentpath}
-             {\@EA\def\@EA#1\@EA{\the\dimexpr##1\relax}}}
+\pgfkeysdef{/handlers/.dimension in}{%
+  \pgfkeysdef{\pgfkeyscurrentpath}{%
+    \@EA\def\@EA#1\@EA{\the\dimexpr##1\relax}}}
 
-\pgfkeysdef{/handlers/.store number in}{%
-  \pgfkeysdef{\pgfkeyscurrentpath}
-             {\@EA\def\@EA#1\@EA{\the\numexpr##1\relax}}}
+\pgfkeysdef{/handlers/.number in}{%
+  \pgfkeysdef{\pgfkeyscurrentpath}{%
+    \@EA\def\@EA#1\@EA{\the\numexpr##1\relax}}}
 
-%D .append to, .prepend to
+%D .append to, .prepend to, .prepend code (aka .prefix code),
+%D \@@defaultsep (used between old and ap/pre-pended code)
 %D
 %D Declare key to append or prepend code to #1 (created if needed).
 
+\def\@@defaultsep{}
+\def\defaultsep{\def\@@defaultsep}
+
+\pgfkeys{/handlers/.prepend code/.style={%
+    /handlers/.prefix code=#1}}
+
 \pgfkeysdef{/handlers/.append to}{%
+  \@EA\ifx\csname\@EA\gobbleonearg\string#1\endcsname\relax
+    \@EA\def\csname\@EA\gobbleonearg\string#1\endcsname{}\fi
   \pgfkeysdef{\pgfkeyscurrentpath}{%
-    \@EA\ifx\csname\@EA\gobbleonearg\string#1\endcsname\relax
-      \@EA\def\csname\@EA\gobbleonearg\string#1\endcsname{}\fi
     \@EA\scratchtoken\@EA{#1}%
     \@EA\edef\csname\@EA\gobbleonearg\string#1\endcsname
-      {\the\scratchtoken##1}}}
+      {\the\scratchtoken
+       \@EA\ifx\the\scratchtoken\@empty\else\@@defaultsep\fi##1}}}
 
 \pgfkeysdef{/handlers/.prepend to}{%
+  \@EA\ifx\csname\@EA\gobbleonearg\string#1\endcsname\relax
+    \@EA\def\csname\@EA\gobbleonearg\string#1\endcsname{}\fi
   \pgfkeysdef{\pgfkeyscurrentpath}{%
-    \@EA\ifx\csname\@EA\gobbleonearg\string#1\endcsname\relax
-      \@EA\def\csname\@EA\gobbleonearg\string#1\endcsname{}\fi
     \@EA\scratchtoken\@EA{#1}%
     \@EA\edef\csname\@EA\gobbleonearg\string#1\endcsname
-      {##1\the\scratchtoken}}}
+      {##1\@EA\ifx\the\scratchtoken\@empty\else\@@defaultsep\fi
+       \the\scratchtoken}}}
 
-%D /parameters/prefix, /parameters/...
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%D /eparameters/declare family, /eparameters/.../...
 %D
-%D Declare the prefix used in subsequent /parameters/... calls.
+%D Declare the key to be a family and set the prefix.
 
-\pgfkeys{/parameters/.is family}
-\pgfkeysdef{/parameters/prefix}{\edef\@@prefix{#1}}
-\pgfkeysdef{/parameters/.unknown}{%
-  \@EA\def\csname \@@prefix\pgfkeyscurrentname\endcsname{#1}}
+\pgfkeysdef{/eparameters/prefix}
 
-%D /eparameters/prefix, /eparameters/...
-%D
-%D Declare the prefix used in subsequent /parameters/... calls.
-
-\pgfkeys{/eparameters/.is family}
+%% no warning (use as raweparameters)
 \pgfkeysdef{/eparameters/prefix}{\edef\@@prefix{#1}}
 \pgfkeysdef{/eparameters/.unknown}{%
-  \@EA\edef\csname \@@prefix\pgfkeyscurrentname\endcsname{#1}}
+  \@EA\edef\csname\@@prefix\pgfkeyscurrentname\endcsname{#1}}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%D .store in cs, .estore in cs
+%D /parameters/declare family, /parameters/.../...
 %D
-%D Same as .store in and .estore in, use \csname...\endcsname instead.
+%D Declare the key to be a family and set the prefix.
 
-\pgfkeysdef{/handlers/.store in cs}{%
-  \pgfkeysdef{\pgfkeyscurrentpath}{\@EA\def\csname#1\endcsname{##1}}}
+\pgfkeys{/parameters/.is family}
 
-\pgfkeysdef{/handlers/.estore in cs}{%
-  \pgfkeysdef{\pgfkeyscurrentpath}{\@EA\edef\csname#1\endcsname{##1}}}
+%% no warning (use as raw parameters)
+\pgfkeysdef{/parameters/prefix}{%
+  \edef\@@prefix{#1}%
+  \pgfkeysalso{/parameters/\if @#1@\else#1/\fi.is family}}
+\pgfkeysdef{/parameters/.unknown}{%
+  \@EA\def\csname\@@prefix\pgfkeyscurrentname\endcsname{#1}}
+
+%% family must be created (allows more tuning)
+\pgfqkeys{/parameters/declare families}{%
+  .style={declare family}{.list={#1}}}
+\pgfkeysdef{/parameters/declare family}{%
+  \pgfqkeysalso{/parameters}{prefix=#1}%
+  \pgfqkeys{/parameters\ifx @#1@\else/#1\fi}{%
+    .is family,
+    .prefix code={%
+      \edef\@@prefix{#1}},
+    .unknown/.code={%
+      \@EA\def\csname\@@prefix\pgfkeyscurrentname\endcsname{##1}}}}
+
+%D /parameters/declare (e)store, /parameters/.../...
+%D
+%D Declare the key to be a def-ed macro (use \@@prefix).
+
+\pgfqkeys{/parameters/declare stores}{%
+  .style={declare store/.list={#1}}}
+\pgfqkeys{/parameters/declare store}{%
+  .style={\ifx\@@prefix\@empty\else\@@prefix/\fi#1/%
+    .store in/.expand once=\csname\@@prefix#1\endcsname}}
+
+\pgfqkeys{/parameters/declare estores}{%
+  .style={declare estore/.list={#1}}}
+\pgfqkeys{/parameters/declare estore}{%
+  .style={\ifx\@@prefix\@empty\else\@@prefix/\fi#1/%
+    .estore in/.expand once=\csname\@@prefix#1\endcsname}}
+
+%D /parameters/declare dimension, /parameters/.../...
+%D
+%D Declare the key to be a dimension (use \@@prefix).
+
+\pgfqkeys{/parameters/declare dimensions}{%
+  .style={declare dimension/.list={#1}}}
+\pgfqkeys{/parameters/declare dimension}{%
+  .style={\ifx\@@prefix\@empty\else\@@prefix/\fi#1/%
+    .dimension in/.expand once=\csname\@@prefix#1\endcsname}}
+
+%D /parameters/declare number, /parameters/.../...
+%D
+%D Declare the key to be a number (use \@@prefix).
+
+\pgfqkeys{/parameters/declare numbers}{%
+  .style={declare number/.list={#1}}}
+\pgfqkeys{/parameters/declare number}{%
+  .style={\ifx\@@prefix\@empty\else\@@prefix/\fi#1/%
+    .number in/.expand once=\csname\@@prefix#1\endcsname}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% shortcuts
+\pgfqkeys{/parameters}{%
+  families/.style={/parameters/declare family/.list={#1}},
+  family/.style={/parameters/declare family=#1},
+  stores/.style={/parameters/declare store/.list={#1}},
+  store/.style={/parameters/declare store=#1},
+  estores/.style={/parameters/declare estore/.list={#1}},
+  estore/.style={/parameters/declare estore=#1},
+  dimensions/.style={/parameters/declare dimension/.list={#1}},
+  dimension/.style={/parameters/declare dimension=#1},
+  numbers/.style={/parameters/declare number/.list={#1}},
+  number/.style={/parameters/declare number=#1}}
 
 
 \endinput

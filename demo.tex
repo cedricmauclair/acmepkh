@@ -6,22 +6,100 @@
 \usepackage{acmepkh, verbatim}
 
 \let\type\texttt
-\def\typehandler#1{\type{.#1}}
+\def\handler#1{\type{.#1}}
 \def\macro#1{\type{\char`\\#1}}
 
 \pgfkeys{/test/.is family}
 \def\testhandlers{\pgfqkeys{/test}}
 
-\newcommand\getparameters[2][]{%
- \pgfqkeys{/parameters}{prefix=#1, #2}}
+\newcommand\getrawparameters[1][]{%
+  \pgfqkeys{/parameters}{prefix=#1}% set \@@prefix
+  \pgfqkeys{/parameters}}
 
-\newcommand\geteparameters[2][]{%
- \pgfqkeys{/eparameters}{prefix=#1, #2}}
+\newcommand\getraweparameters[1][]{%
+  \pgfqkeys{/eparameters}{prefix=#1}% set \@@prefix
+  \pgfqkeys{/eparameters}}
 
+\newcommand\declareparameters[1][]{%
+  \pgfqkeys{/parameters}{declare family=#1}% set \@@prefix too
+  \pgfqkeys{/parameters}}
+
+\newcommand\getparameters[1][]{%
+  \pgfqkeys{/parameters}{prefix=#1}% set \@@prefix
+  \pgfqkeys{/parameters\if @#1@\else/#1\fi}}
+
+\newcommand\geteparameters[1][]{%
+  \pgfqkeys{/eparameters}{prefix=#1}% set \@@prefix
+  \pgfqkeys{/eparameters\if @#1@\else/#1\fi}}
+
+\newcommand\processcommalist[2][]{%
+  \pgfqkeys{/processcommalist}{.code=#2{##1}, .list={#1}}}
+
+
+\def\dosingleempty#1%
+  {\doifnextoptionalelse
+     {\firstargumenttrue#1}%
+     {\dosinglefakeempty#1}}
+
+\def\dodoubleempty#1%
+  {\doifnextoptionalelse
+     {\dodoubletestempty#1}%
+     {\dodoublefakeempty#1}}
+
+\def\dosinglefakeempty#1%
+  {\firstargumentfalse#1[]}
+
+\def\dodoublefakeempty#1%
+  {\firstargumentfalse\secondargumentfalse#1[][]}
+
+\long\def\dodoubletestempty#1[#2]%
+  {\firstargumenttrue
+   \doifnextoptionalelse
+     {\secondargumenttrue #1[{#2}]}%
+     {\secondargumentfalse#1[{#2}][]}}
+
+\newif\iffirstargument
+\newif\ifsecondargument
+
+\makeatletter
+
+\def\setvalue     #1{\@EA \def\csname#1\endcsname}
+\def\setgvalue    #1{\@EA\gdef\csname#1\endcsname}
+\def\setevalue    #1{\@EA\edef\csname#1\endcsname}
+\def\setxvalue    #1{\@EA\xdef\csname#1\endcsname}
+
+\def\letvalue     #1{\@EA\let\csname#1\endcsname}
+\def\letgvalue    #1{\global\@EA\let\csname#1\endcsname}
+
+\def\resetvalue   #1{\@EA\let\csname#1\endcsname\empty}
+\def\ignorevalue#1#2{\@EA\let\csname#1\endcsname\empty}
+
+\def\getvalue     #1{\csname#1\endcsname}
+
+\def\copyvalue#1#2#3%
+  {\@EA\def\csname#1#3\endcsname{\csname#2#3\endcsname}}
+
+\def\dodoubleargumentwithset#1[#2][#3]{%
+  \def\acme@@process##1{#1[##1][#3]}%
+  \processcommalist[#2]\acme@@process
+  \ignorespaces}
+
+\let\doifnextcharelse\pgfutil@ifnextchar
+\def\doifnextoptionalelse{\doifnextcharelse[}
+\def\doifnextbgroupelse{\doifnextcharelse\bgroup}
+\def\doifinstringelse#1#2#3#4{%
+  \pgfutil@in@{#1}{#2}%
+  \ifpgfutil@in@#3\else#4\fi}
+
+\makeatother
+
+
+\parindent0pt
 
 \begin{document}
 
-\section{\typehandler{dimension} and \typehandler{number}}
+
+\section{\handler{dimension} and \handler{number}}
 
 \testhandlers{%
   dimension/.store in=\testdimension,
@@ -31,79 +109,195 @@
   number/.number=12+3.2}
 
 \begin{itemize}
-\item \typehandler{dimension} : 15.0pt/\testdimension
-\item \typehandler{number} : 15.2/\testnumber
+\item \handler{dimension} : 15.0pt/\testdimension
+\item \handler{number} :    15.2/\testnumber
 \end{itemize}
 
 
-\section{\typehandler{store dimension in} and \typehandler{store number in}}
+\section{\handler{dimension in} and \handler{number in}}
 
 \testhandlers{%
-  storedimensionin/.store dimension in=\teststoredimensionin,
-  storenumberin/.store number in=\teststorenumberin,
+  dimension in/.dimension in=\testdimensionin,
+  number in/.number in=\testnumberin,
   % test values
-  storedimensionin=12pt+3pt,
-  storenumberin=12+3.2}
+  dimension in=12pt+3pt,
+  number in=12+3.2}
 
 \begin{itemize}
-\item \typehandler{store dimension in} : 15.0pt/\teststoredimensionin
-\item \typehandler{store number in} : 15.2/\teststorenumberin
+\item \handler{dimension in} : 15.0pt/\testdimensionin
+\item \handler{number in} :    15.2/\testnumberin
 \end{itemize}
 
 
-\section{\typehandler{append to} and \typehandler{prepend to}}
+\section{\handler{append to} and \handler{prepend to}}
 
 \testhandlers{%
-  append to/.append to=\testappendto,
-  prepend to/.prepend to=\testprependto,
+  append/.append to=\testappendto,
+  prepend/.prepend to=\testprependto,
   % test values
-  append to=one,
-  append to={, two},
-  prepend to=one,
-  prepend to={two, },
-  prepend to=\testappendto
+  append=one,
+  append={, two },  % spaces at the end are skiped, use \space or \ or {{}}
+  append={{three }},% spaces at the end are skiped, use \space or \ or {{}}
+  prepend=one,
+  prepend={two,\ }, % spaces at the end are skiped, use \space or \ or {{}}
+  prepend=\testappendto,
 }
 
 \begin{itemize}
-\item \typehandler{append to} : one, two/\testappendto
-\item \typehandler{prepend to} : two, onetwo,one/\testprependto
+\item \handler{append to} :  one, twothree/\testappendto
+\item \handler{prepend to} : one, twothree two, one/\testprependto
 \end{itemize}
 
 
-\section{\type{/(e)parameters/prefix} and \type{/(e)parameters/...}}
+\section{\macro{getrawparameters} and \macro{getraweparameters}}
 
-\pgfqkeys{/parameters}{%
-  prefix=,     toto=titi, % \toto     now exist with value 'titi'
-  prefix=test, toto=\toto}% \testtoto now exist with value \toto
+No need to declare family first.
 
-\begin{itemize}
-\item \type{/parameters/prefix} : test/\csname @@prefix\endcsname
-\item \type{/parameters/...} : titi -- tata/%
-                             \toto\ -- \def\toto{tata}\testtoto
-\end{itemize}
-
-
-\pgfqkeys{/eparameters}{%
-  prefix=,     toto=titi, % \toto     now exist with value 'titi'
-  prefix=test, toto=\toto}% \testtoto now exist with value 'titi'
+\def\toto{toto}
+\getrawparameters[test]{tata=\toto}
+\getraweparameters{tata=\toto}
+\def\toto{tata}
 
 \begin{itemize}
-\item \type{/eparameters/prefix} : test/\csname @@prefix\endcsname
-\item \type{/eparameters/...} : titi -- titi/%
-                              \toto\ -- \def\toto{tata}\testtoto
+\item \macro{getrawparameters} :  tata/\testtata
+\item \macro{getraweparameters} : toto/\tata
 \end{itemize}
 
 
 \section{\macro{getparameters} and \macro{geteparameters}}
 
-\noindent
-\getparameters[test]
-  {toto=titi, tata=\testtoto, toto=tete}
-tete -- tete/\testtoto\ -- \testtata
+Must declare family first.
 
-\noindent
-\geteparameters
-  {toto=tutu, tata=\toto, toto=tete}
-tete -- tutu/\toto\ -- \tata
+\pgfkeys{/parameters/declare family=toto}
+\pgfkeys{/eparameters/declare family=etoto,
+  /eparameters/etoto/titi/.append to=\etototiti,
+  /eparameters/etoto/titi/.prepend code={hello}}
+
+hellohello/%
+\def\toto{toto}%
+\getparameters[toto]{titi=\toto}%
+\defaultsep{, }%
+\geteparameters[etoto]{titi=\toto, titi=tata}
+\def\toto{tata}
+
+\begin{itemize}
+\item \macro{getparameters} :  tata/\tototiti
+\item \macro{geteparameters} : toto, tata/\etototiti
+\end{itemize}
+
+
+\section{\macro{processcommalist}}
+
+\def\putparen#1{(#1)}
+\processcommalist[one, two, three=four]\putparen
+
+\def\toto{toto}%
+\declareparameters[test]{%
+  estore=toto,
+  stores={tete, titi},
+  dimension=tata,
+  number=tutu}
+
+\getparameters[test]{%
+  toto=\toto,
+  tete=tete,    titi=titi,
+  tata=3cm+2pt, tutu=15+7.2}
+\def\toto{tata}
+
+--- test/\csname @@prefix\endcsname\ ---\\
+0. toto/\testtoto\\
+1. tete/\testtete\ -- titi/\testtiti\\
+2. 87.35826pt/\testtata\ -- 22.2/\testtutu
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\def\toto{toto}%
+\declareparameters{%
+  store=toto,
+  stores={tete, titi},
+  dimension=tata,
+  number=tutu}
+
+\getparameters{%
+  toto=\toto,
+  tete=titi,    titi=tete,
+  tata=3cm+2pt, tutu=15+7.2}
+\def\toto{tata}
+
+--- /\csname @@prefix\endcsname\ ---\\
+0. tata/\toto\\
+1. titi/\tete\ -- tete/\titi\\
+2. 87.35826pt/\tata\ -- 22.2/\tutu
+
+\clearpage
+
+\section{\macro{blank}}
+
+\makeatletter
+\declareparameters[blank]{%
+  % prefix added automatically for standard usages:
+  % (e)store(s), dimension(s), number(s)
+  dimension=@blank,% /parameters/blank/@blank to store arg evaluated as dimension
+  % fine tuning needs explicit prefix first
+  blank,% also /parameters/blank(/.cd)
+  .is choice,
+  small/.style={@blank=\smallskipamount},
+  medium/.style={@blank=\medskipamount},
+  big/.style={@blank=\bigskipamount},
+  half/.style={@blank=.5\baselineskip},
+  line/.style={@blank=\baselineskip},
+  .unknown/.style={@blank=\pgfkeyscurrentname}}
+
+\newcommand\setlen[2]{#1=\dimexpr#2\relax}
+
+\newcommand\blank[1][line]{%
+  \scratchdimen0pt
+  \def\doit##1{%
+    \splitatstar{##1}%
+    \getparameters[blank]{\@dimen}%
+    \setlen\scratchdimen{\scratchdimen+\blank@blank*\@count}}
+  \processcommalist[#1]\doit
+  \vskip\scratchdimen}
+
+\newcommand\splitatstar[1]{%
+  \doifinstringelse{*}{#1}
+    {\blanksplit#1\blanksplit}
+    {\blanksplit1*#1\blanksplit}}
+
+\def\blanksplit#1*#2\blanksplit{%
+  \def\@count{#1}\def\@dimen{#2}}
+
+\makeatother
+
+0. default (line=\macro{baselineskip})
+\blank
+1. 20pt + 2*2.5pt + 5pt = 30pt
+\blank[20pt,2*2.5pt,5pt]
+2. 5*line
+\blank[5*line]
+3. medium
+\blank[medium]
+4. 2*small + medium (=big,=2*medium)
+\blank[2*small, medium]
+5. big (=2*medium)
+\blank[big]
+6. stop
+
+
+
+
+\def\ensure#1#2#3\relax{%
+  \ifdim#3#2#1\def#1{\dimexpr#3\relax}\fi}
+
+\scratchdimen100pt
+\the\scratchdimen
+
+\ensure \scratchdimen > 200pt \relax
+\the\scratchdimen
+
+\ensure \scratchdimen < 150pt \relax
+\the\scratchdimen
+
+
 
 \end{document}
